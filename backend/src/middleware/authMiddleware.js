@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
+const authorize = require('./roleMiddleware');
 
 const authenticate = async (req, res, next) => {
   try {
@@ -18,7 +19,7 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Session expired or invalid token.' });
     }
 
-    // Verify user in MySQL
+    // Verify user in Database
     const [rows] = await pool.query(
       'SELECT id, firebase_uid, name, email, phone, role, status FROM users WHERE id = ?',
       [decoded.id]
@@ -40,4 +41,10 @@ const authenticate = async (req, res, next) => {
   }
 };
 
+authenticate.verifyToken = authenticate;
+authenticate.requireRole = (roles) => Array.isArray(roles) ? authorize(...roles) : authorize(roles);
+
 module.exports = authenticate;
+module.exports.verifyToken = authenticate;
+module.exports.requireRole = authenticate.requireRole;
+
