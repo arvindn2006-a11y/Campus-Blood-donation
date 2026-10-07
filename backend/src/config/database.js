@@ -24,9 +24,13 @@ function adaptSqlForSqlite(sql) {
 function initSqliteFallback() {
   try {
     const Database = require('better-sqlite3');
-    const dbDir = path.join(__dirname, '../../../database');
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
+    let dbDir = path.join(process.cwd(), 'database');
+    try {
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+    } catch (e) {
+      dbDir = process.cwd();
     }
     const dbPath = path.join(dbDir, 'campus_bloodconnect.sqlite');
     sqliteDb = new Database(dbPath);
