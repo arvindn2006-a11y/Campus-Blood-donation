@@ -1,9 +1,9 @@
 import api from './api';
 
 export const authService = {
-  // Real-Time Mobile OTP Generator
-  sendOtp: async ({ phone, purpose = 'REGISTER' }) => {
-    const res = await api.post('/auth/send-otp', { phone, purpose });
+  // Mobile & Email OTP Generator
+  sendOtp: async ({ phone, email, name, purpose = 'REGISTER' }) => {
+    const res = await api.post('/auth/send-otp', { phone, email, name, purpose });
     return res.data;
   },
 

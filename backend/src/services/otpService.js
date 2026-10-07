@@ -188,13 +188,15 @@ async function sendOtp({ phone, email = null, name = 'Student Donor', purpose = 
 
   return {
     success: true,
-    message: `Real-time OTP generated and sent to ${normalized}${email ? ` and ${email}` : ''}`,
+    message: `OTP generated and sent to ${normalized}${email ? ` and ${email}` : ''}`,
     phone: normalized,
     email,
     expiresInSeconds: 300,
     expiresAt: new Date(expiresAt).toISOString(),
     provider: smsResult.provider,
-    previewOtp: otpCode // Returned for live HUD notification banner display
+    previewOtp: otpCode,
+    otpCode: otpCode,
+    otp: otpCode
   };
 }
 

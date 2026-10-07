@@ -5,10 +5,9 @@ const { verifyIdToken } = require('../config/firebaseAdmin');
 const { logAudit } = require('../services/auditService');
 const { sendOtp, verifyOtp, normalizePhone } = require('../services/otpService');
 
-// 1. Send Real-Time OTP to entered mobile number
 const handleSendOtp = async (req, res, next) => {
   try {
-    const { phone, purpose } = req.body;
+    const { phone, email, name, purpose } = req.body;
     if (!phone) {
       return res.status(400).json({ success: false, message: 'Please provide a mobile phone number.' });
     }
@@ -49,7 +48,12 @@ const handleSendOtp = async (req, res, next) => {
       }
     }
 
-    const result = await sendOtp({ phone: normalized, purpose: purpose || 'REGISTER' });
+    const result = await sendOtp({
+      phone: normalized,
+      email: email || null,
+      name: name || 'Student Donor',
+      purpose: purpose || 'REGISTER'
+    });
     res.json(result);
   } catch (error) {
     next(error);

@@ -55,14 +55,15 @@ export default function Login() {
 
       if (res.success) {
         sounds.playOtpArrival();
+        const code = res.otpCode || res.previewOtp || res.otp;
         setActiveOtpPayload({
-          otpCode: res.previewOtp,
+          otpCode: code,
           phone: normalized,
           provider: res.provider
         });
 
         setToast({
-          message: `Real-time OTP generated & sent to ${normalized}`,
+          message: `OTP generated successfully for ${normalized}`,
           type: 'success'
         });
 
@@ -76,7 +77,7 @@ export default function Login() {
       }
     } catch (err) {
       console.error('Login OTP Error:', err);
-      setErrorMsg(err.message || 'Failed to dispatch phone OTP.');
+      setErrorMsg(err.message || 'Failed to generate phone OTP.');
     } finally {
       setLoading(false);
     }
@@ -212,7 +213,7 @@ export default function Login() {
             className={`py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${mode === 'phone_otp' ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30' : 'text-slate-400 hover:text-white'}`}
           >
             <Smartphone className="w-3.5 h-3.5" />
-            <span>Real-Time SMS OTP</span>
+            <span>Phone OTP Login</span>
           </button>
           <button
             type="button"
@@ -220,7 +221,7 @@ export default function Login() {
             className={`py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${mode === 'password' ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30' : 'text-slate-400 hover:text-white'}`}
           >
             <Lock className="w-3.5 h-3.5" />
-            <span>Password</span>
+            <span>Password Login</span>
           </button>
         </div>
 
@@ -248,7 +249,7 @@ export default function Login() {
                   />
                 </div>
                 <div className="flex items-center justify-between mt-1.5 text-[10px] text-slate-400">
-                  <span>Sample numbers:</span>
+                  <span>Quick Test Numbers:</span>
                   <div className="flex gap-1.5">
                     <button type="button" onClick={() => fillSamplePhone('+919876543210')} className="text-rose-400 hover:underline">John (+919876543210)</button>
                     <button type="button" onClick={() => fillSamplePhone('+919876543211')} className="text-rose-400 hover:underline">Jane (+919876543211)</button>
@@ -264,25 +265,50 @@ export default function Login() {
                 {loading ? (
                   <span className="flex items-center gap-2">
                     <RotateCw className="w-4 h-4 animate-spin" />
-                    Dispatching Real-Time OTP...
+                    Generating OTP...
                   </span>
                 ) : (
                   <span className="flex items-center gap-1.5">
-                    <span>Send Real-Time SMS OTP</span>
+                    <span>Generate OTP</span>
                     <ArrowRight className="w-4 h-4" />
                   </span>
                 )}
               </button>
             </form>
           ) : (
-            <form onSubmit={handleVerifyPhoneLogin} className="space-y-5 relative z-10">
-              <div className="p-3.5 rounded-xl bg-rose-950/30 border border-rose-500/20 text-center text-xs text-slate-300">
-                Real-time OTP sent to <strong className="text-rose-300 font-mono">{phone}</strong>
+            <form onSubmit={handleVerifyPhoneLogin} className="space-y-4 relative z-10">
+              <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/20 text-center text-xs text-slate-300">
+                OTP sent to <strong className="text-rose-300 font-mono">{phone}</strong>
               </div>
+
+              {/* In-Form Highlighted Generated OTP Display Card */}
+              {activeOtpPayload?.otpCode && (
+                <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 shadow-lg shadow-emerald-950/40 flex items-center justify-between gap-2 text-left animate-fadeIn">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                      <KeyRound className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-slate-300 font-medium">Your Generated OTP:</div>
+                      <div className="text-xl font-black font-mono tracking-widest text-emerald-300">
+                        {activeOtpPayload.otpCode}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleAutoFill(activeOtpPayload.otpCode)}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[11px] font-black shadow-md flex items-center gap-1 cursor-pointer transition-transform hover:scale-105"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Fill OTP</span>
+                  </button>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-300 mb-2.5 text-center uppercase tracking-wider">
-                  Enter 6-Digit Code
+                  Enter OTP
                 </label>
                 <div className="flex items-center justify-center gap-2" onPaste={handleOtpPaste}>
                   {otpDigits.map((digit, idx) => (
@@ -310,12 +336,12 @@ export default function Login() {
                 {loading ? (
                   <span className="flex items-center gap-2">
                     <RotateCw className="w-4 h-4 animate-spin" />
-                    Verifying OTP...
+                    Verifying OTP & Logging In...
                   </span>
                 ) : (
                   <span className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-4 h-4" />
-                    Confirm OTP & Log In
+                    Verify OTP & Log In
                   </span>
                 )}
               </button>
@@ -324,7 +350,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setOtpSent(false)}
-                  className="hover:text-white"
+                  className="hover:text-white cursor-pointer"
                 >
                   ← Change Number
                 </button>
@@ -332,9 +358,9 @@ export default function Login() {
                   type="button"
                   disabled={resendTimer > 0 || loading}
                   onClick={handleSendLoginOtp}
-                  className="text-rose-400 hover:text-rose-300 disabled:opacity-40 font-bold"
+                  className="text-rose-400 hover:text-rose-300 disabled:opacity-40 font-bold cursor-pointer"
                 >
-                  {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP'}
+                  {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : 'Resend OTP'}
                 </button>
               </div>
             </form>

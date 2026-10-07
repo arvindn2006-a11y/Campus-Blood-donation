@@ -76,22 +76,25 @@ export default function Register() {
     setLoading(true);
 
     try {
-      // Call backend Real-Time OTP Engine
+      // Call backend OTP Engine
       const otpRes = await authService.sendOtp({
         phone: normalized,
+        email: formData.email.trim(),
+        name: formData.name.trim(),
         purpose: 'REGISTER'
       });
 
       if (otpRes.success) {
         sounds.playOtpArrival();
+        const code = otpRes.otpCode || otpRes.previewOtp || otpRes.otp;
         setActiveOtpPayload({
-          otpCode: otpRes.previewOtp,
+          otpCode: code,
           phone: normalized,
           provider: otpRes.provider
         });
 
         setToast({
-          message: `Real-time OTP generated & dispatched to ${normalized}`,
+          message: `OTP generated successfully for ${normalized}`,
           type: 'success'
         });
 
@@ -106,7 +109,7 @@ export default function Register() {
       }
     } catch (err) {
       console.error('OTP Send Error:', err);
-      setErrorMsg(err.message || 'Failed to dispatch real-time SMS OTP. Please verify your phone number.');
+      setErrorMsg(err.message || 'Failed to generate OTP. Please verify your mobile number.');
     } finally {
       setLoading(false);
     }
@@ -249,8 +252,8 @@ export default function Register() {
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 mt-1.5 max-w-md mx-auto">
             {step === 1
-              ? 'Join our student life-saving network with verified real-time mobile OTP authentication.'
-              : 'Enter the 6-digit real-time verification OTP sent to your phone.'}
+              ? 'Join our campus life-saving network with verified mobile OTP authentication.'
+              : 'Enter the 6-digit verification OTP sent to your phone and email.'}
           </p>
 
           {step === 1 && (
@@ -274,7 +277,7 @@ export default function Register() {
           <div className="w-6 h-0.5 bg-white/10" />
           <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold transition-all ${step === 2 ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30' : 'bg-white/5 text-slate-400'}`}>
             <span className="w-4 h-4 rounded-full bg-white/20 text-center leading-4 text-[10px]">2</span>
-            <span>Real-Time OTP</span>
+            <span>Enter OTP</span>
           </div>
         </div>
 
@@ -371,7 +374,7 @@ export default function Register() {
 
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                Mobile Number for Real-Time SMS OTP *
+                Mobile Number *
               </label>
               <div className="relative">
                 <Smartphone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -385,7 +388,7 @@ export default function Register() {
                 />
               </div>
               <span className="text-[10px] text-slate-400 mt-1 block">
-                Enter your mobile number (with country code like +91). A 6-digit real-time SMS OTP will be generated.
+                Enter your 10-digit mobile number with country code (e.g. +919876543210).
               </span>
             </div>
 
@@ -422,11 +425,11 @@ export default function Register() {
               {loading ? (
                 <span className="flex items-center gap-2">
                   <RotateCw className="w-4 h-4 animate-spin" />
-                  Generating Real-Time OTP...
+                  Generating OTP...
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
-                  <span>Generate Real-Time SMS OTP</span>
+                  <span>Generate OTP</span>
                   <ArrowRight className="w-4 h-4" />
                 </span>
               )}
@@ -434,20 +437,48 @@ export default function Register() {
           </form>
         )}
 
-        {/* STEP 2: Real OTP Verification Screen */}
+        {/* STEP 2: OTP Verification Screen */}
         {step === 2 && (
-          <form onSubmit={handleVerifyAndRegister} className="space-y-6 relative z-10">
+          <form onSubmit={handleVerifyAndRegister} className="space-y-5 relative z-10">
             
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-950/30 to-purple-950/20 border border-rose-500/20 text-center">
-              <span className="text-xs text-slate-400 block mb-1">Verification OTP Dispatched to</span>
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-rose-950/30 to-purple-950/20 border border-rose-500/20 text-center">
+              <span className="text-xs text-slate-400 block mb-1">OTP sent to mobile number</span>
               <strong className="text-base sm:text-lg text-rose-300 font-mono tracking-wider font-bold">
                 {formData.phone}
               </strong>
             </div>
 
+            {/* In-Form Highlighted Generated OTP Display Card */}
+            {activeOtpPayload?.otpCode && (
+              <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 shadow-xl shadow-emerald-950/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left animate-fadeIn">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                    <KeyRound className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-slate-300 font-semibold flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      Generated OTP Code:
+                    </div>
+                    <div className="text-2xl font-black font-mono tracking-widest text-emerald-300">
+                      {activeOtpPayload.otpCode}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleAutoFill(activeOtpPayload.otpCode)}
+                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black shadow-md shadow-emerald-500/30 flex items-center gap-1.5 cursor-pointer transition-transform hover:scale-105"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Fill OTP</span>
+                </button>
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-3 text-center uppercase tracking-wider">
-                Enter 6-Digit Verification Code
+                Enter OTP
               </label>
 
               {/* 6 Individual Box Inputs */}
@@ -477,12 +508,12 @@ export default function Register() {
               {loading ? (
                 <span className="flex items-center gap-2">
                   <RotateCw className="w-4 h-4 animate-spin" />
-                  Verifying OTP & Activating Profile...
+                  Verifying OTP & Registering...
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4" />
-                  Confirm OTP & Complete Registration
+                  Verify OTP & Complete Registration
                 </span>
               )}
             </button>
@@ -491,18 +522,18 @@ export default function Register() {
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="hover:text-white flex items-center gap-1 font-semibold"
+                className="hover:text-white flex items-center gap-1 font-semibold cursor-pointer"
               >
-                ← Edit Information
+                ← Edit Details
               </button>
 
               <button
                 type="button"
                 disabled={resendTimer > 0 || loading}
                 onClick={handleSendOtp}
-                className="text-rose-400 hover:text-rose-300 disabled:opacity-40 disabled:cursor-not-allowed font-bold"
+                className="text-rose-400 hover:text-rose-300 disabled:opacity-40 disabled:cursor-not-allowed font-bold cursor-pointer"
               >
-                {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : 'Resend Real-Time OTP'}
+                {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : 'Resend OTP'}
               </button>
             </div>
           </form>
