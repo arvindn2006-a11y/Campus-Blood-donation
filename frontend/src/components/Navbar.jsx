@@ -136,9 +136,9 @@ export default function Navbar() {
                     className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-xs font-bold text-slate-200"
                   >
                     <User className="w-3.5 h-3.5 text-rose-400" />
-                    <span>{user.name?.split(' ')[0]}</span>
+                    <span>{user?.name ? user.name.split(' ')[0] : 'Donor'}</span>
                     <span className="px-1.5 py-0.5 rounded-md bg-rose-500/20 text-rose-300 text-[10px] font-mono">
-                      {user.bloodGroup || 'Donor'}
+                      {user?.bloodGroup || 'Donor'}
                     </span>
                   </Link>
                 )}

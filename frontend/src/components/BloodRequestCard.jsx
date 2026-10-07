@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { Hospital, MapPin, Calendar, Clock, AlertTriangle, Users } from 'lucide-react';
 
 export default function BloodRequestCard({ request }) {
+  if (!request) return null;
+
   const urgencyClasses = {
     EMERGENCY: 'border-red-500/50 bg-red-950/20 text-red-400',
     URGENT: 'border-amber-500/50 bg-amber-950/20 text-amber-400',

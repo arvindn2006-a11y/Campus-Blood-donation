@@ -69,10 +69,10 @@ export default function SmsNotificationHud({ activeOtp, onAutoFill, onClose }) {
                 <span className="text-[11px] font-bold text-white tracking-wide uppercase">Real-Time SMS Alert</span>
                 <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
-                  {displayAlert.provider || 'Live SMS Gateway'}
+                  {displayAlert?.provider || 'Live SMS Gateway'}
                 </span>
               </div>
-              <span className="text-[10px] text-slate-400">To: {displayAlert.phone}</span>
+              <span className="text-[10px] text-slate-400">To: {displayAlert?.phone || 'Your Phone'}</span>
             </div>
           </div>
 
@@ -89,7 +89,7 @@ export default function SmsNotificationHud({ activeOtp, onAutoFill, onClose }) {
           <div className="text-xs text-slate-300 leading-relaxed font-mono">
             Campus BloodConnect OTP:{' '}
             <span className="inline-block px-2.5 py-0.5 rounded-lg bg-rose-600/30 border border-rose-500 text-rose-200 font-bold text-base tracking-[0.2em] shadow-inner">
-              {displayAlert.otpCode}
+              {displayAlert?.otpCode || '------'}
             </span>
           </div>
           <span className="text-[10px] text-slate-400 block mt-1">

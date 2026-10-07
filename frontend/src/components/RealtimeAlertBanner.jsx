@@ -5,7 +5,7 @@ import { AlertOctagon, X, Zap, ArrowRight } from 'lucide-react';
 import { sounds } from '../utils/soundEffects';
 
 export default function RealtimeAlertBanner() {
-  const { incomingAlert, clearIncomingAlert } = useSocket();
+  const { incomingAlert, clearIncomingAlert } = useSocket() || {};
 
   useEffect(() => {
     if (incomingAlert) {

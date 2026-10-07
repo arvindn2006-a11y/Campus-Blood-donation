@@ -117,15 +117,17 @@ export default function AdminDashboard() {
         <div className="space-y-4">
           <h3 className="font-heading font-bold text-xl text-white">Live Audit Log</h3>
           <div className="glass-card p-4 space-y-3 max-h-[420px] overflow-y-auto">
-            {recentLogs.length > 0 ? (
+            {recentLogs && recentLogs.length > 0 ? (
               recentLogs.map(log => (
                 <div key={log.id} className="p-2.5 rounded-lg bg-white/5 text-xs space-y-1">
                   <div className="flex items-center justify-between text-slate-300">
-                    <strong className="font-mono text-[11px] text-rose-400">{log.action}</strong>
-                    <span className="text-[10px] text-slate-500">{new Date(log.created_at).toLocaleTimeString()}</span>
+                    <strong className="font-mono text-[11px] text-rose-400">{log?.action || 'AUDIT'}</strong>
+                    <span className="text-[10px] text-slate-500">
+                      {log?.created_at ? new Date(log.created_at).toLocaleTimeString() : 'Just now'}
+                    </span>
                   </div>
                   <p className="text-[11px] text-slate-400">
-                    {log.user_name || 'System'} • {log.entity_type} #{log.entity_id}
+                    {log?.user_name || 'System'} • {log?.entity_type || 'Event'} #{log?.entity_id || ''}
                   </p>
                 </div>
               ))
