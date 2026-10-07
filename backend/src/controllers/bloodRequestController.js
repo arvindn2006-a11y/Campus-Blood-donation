@@ -2,8 +2,10 @@ const pool = require('../config/database');
 const { findMatchingDonors } = require('../services/matchingService');
 const { createInAppNotification } = require('../services/notificationService');
 const { sendTransactionalSms } = require('../services/smsService');
+const { sendEmergencyAlertEmail } = require('../services/mailService');
 const { emitBloodRequestCreated } = require('../services/socketService');
 const { logAudit } = require('../services/auditService');
+
 
 // Get All Blood Requests
 const getAllRequests = async (req, res, next) => {
@@ -118,7 +120,21 @@ const createRequest = async (req, res, next) => {
         donorId: donor.student_id,
         bloodRequestId
       }).catch(console.error);
+
+      // Send Real-Time Emergency Alert Email
+      if (donor.email) {
+        sendEmergencyAlertEmail({
+          toEmail: donor.email,
+          donorName: donor.name,
+          bloodGroup,
+          unitsRequired,
+          hospitalName,
+          hospitalAddress,
+          hospitalPhone
+        }).catch(console.error);
+      }
     }
+
 
     await connection.commit();
 

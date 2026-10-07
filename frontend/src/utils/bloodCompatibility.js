@@ -21,6 +21,9 @@ export const recipientCanReceiveFrom = {
   'O-': ['O-']
 };
 
+export const RBC_COMPATIBILITY = recipientCanReceiveFrom;
+
+
 export const canDonateTo = (donorType, recipientType) => {
   return compatibilityMatrix[donorType]?.includes(recipientType) || false;
 };

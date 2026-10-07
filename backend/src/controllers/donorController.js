@@ -28,7 +28,7 @@ const getAllDonors = async (req, res, next) => {
     }
     if (availability !== undefined && availability !== '') {
       query += ' AND s.availability = ?';
-      params.push(availability === 'true' || availability === '1');
+      params.push(availability === 'true' || availability === '1' || availability === true ? 1 : 0);
     }
     if (search) {
       query += ' AND (u.name LIKE ? OR s.student_id LIKE ?)';
@@ -39,6 +39,27 @@ const getAllDonors = async (req, res, next) => {
 
     const [donors] = await pool.query(query, params);
     res.json({ success: true, donors });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get Matched Requests for logged-in student donor
+const getMyMatches = async (req, res, next) => {
+  try {
+    const [matches] = await pool.query(
+      `SELECT dm.id as match_id, dm.match_type, dm.response, dm.confirmed, dm.created_at,
+              br.id as blood_request_id, br.blood_group, br.component, br.units_required,
+              br.hospital_name, br.hospital_address, br.hospital_phone, br.required_date,
+              br.required_time, br.urgency, br.status as request_status, br.additional_info
+       FROM donor_matches dm
+       JOIN students s ON dm.donor_id = s.id
+       JOIN blood_requests br ON dm.blood_request_id = br.id
+       WHERE s.user_id = ?
+       ORDER BY (br.urgency = 'EMERGENCY') DESC, dm.created_at DESC`,
+      [req.user.id]
+    );
+    res.json({ success: true, matches });
   } catch (error) {
     next(error);
   }
@@ -102,7 +123,7 @@ const respondToMatch = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: `Response recorded: ${response === 'AVAILABLE' ? 'Accepted - Thank you!' : 'Declined'}`,
+      message: `Response recorded: ${response === 'AVAILABLE' ? 'Accepted - Thank you for volunteering to donate!' : 'Declined'}`,
       data: responsePayload
     });
   } catch (error) {
@@ -112,5 +133,7 @@ const respondToMatch = async (req, res, next) => {
 
 module.exports = {
   getAllDonors,
+  getMyMatches,
   respondToMatch
 };
+

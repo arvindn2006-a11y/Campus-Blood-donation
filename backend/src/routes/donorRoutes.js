@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const donorController = require('../controllers/donorController');
-const authenticate = require('../middleware/authMiddleware');
-const authorize = require('../middleware/roleMiddleware');
+const { verifyToken } = require('../middleware/authMiddleware');
 
-router.get('/', authenticate, donorController.getAllDonors);
-router.post('/matches/:matchId/respond', authenticate, donorController.respondToMatch);
+router.get('/', verifyToken, donorController.getAllDonors);
+router.get('/my-matches', verifyToken, donorController.getMyMatches);
+router.post('/matches/:matchId/respond', verifyToken, donorController.respondToMatch);
 
 module.exports = router;
+

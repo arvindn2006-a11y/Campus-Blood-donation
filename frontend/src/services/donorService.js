@@ -5,6 +5,10 @@ export const donorService = {
     const res = await api.get('/donors', { params: filters });
     return res.data;
   },
+  getMyMatches: async () => {
+    const res = await api.get('/donors/my-matches');
+    return res.data;
+  },
   respondToMatch: async (matchId, response) => {
     const res = await api.post(`/donors/matches/${matchId}/respond`, { response });
     return res.data;
@@ -22,3 +26,4 @@ export const donorService = {
     return res.data;
   }
 };
+

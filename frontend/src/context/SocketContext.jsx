@@ -7,6 +7,7 @@ const SocketContext = createContext();
 export const SocketProvider = ({ children }) => {
   const { user } = useAuth();
   const [incomingAlert, setIncomingAlert] = useState(null);
+  const [incomingSms, setIncomingSms] = useState(null);
   const [recentEvents, setRecentEvents] = useState([]);
 
   useEffect(() => {
@@ -24,6 +25,13 @@ export const SocketProvider = ({ children }) => {
       setRecentEvents(prev => [{ type: 'ALERT', data: requestData, time: new Date() }, ...prev]);
     });
 
+    // Real-Time SMS broadcast
+    socket.on('realtime_sms_received', (smsData) => {
+      console.log('📱 Real-time SMS Received:', smsData);
+      setIncomingSms(smsData);
+      setRecentEvents(prev => [{ type: 'SMS_RECEIVED', data: smsData, time: new Date() }, ...prev]);
+    });
+
     // Donor response update for Admins
     socket.on('donor_response_updated', (responseData) => {
       setRecentEvents(prev => [{ type: 'DONOR_RESPONSE', data: responseData, time: new Date() }, ...prev]);
@@ -36,18 +44,21 @@ export const SocketProvider = ({ children }) => {
 
     return () => {
       socket.off('emergency_blood_alert');
+      socket.off('realtime_sms_received');
       socket.off('donor_response_updated');
       socket.off('my_donation_verified');
     };
   }, [user]);
 
   const clearIncomingAlert = () => setIncomingAlert(null);
+  const clearIncomingSms = () => setIncomingSms(null);
 
   return (
-    <SocketContext.Provider value={{ incomingAlert, clearIncomingAlert, recentEvents }}>
+    <SocketContext.Provider value={{ incomingAlert, clearIncomingAlert, incomingSms, clearIncomingSms, recentEvents }}>
       {children}
     </SocketContext.Provider>
   );
 };
 
 export const useSocket = () => useContext(SocketContext);
+
