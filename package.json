@@ -2,6 +2,10 @@
   "name": "campus-bloodconnect-monorepo",
   "version": "1.0.0",
   "description": "Production-ready Campus BloodConnect Web Application",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
     "build": "cd frontend && npm install && npm run build",
     "build:frontend": "cd frontend && npm run build",
