@@ -1,7 +1,20 @@
 import axios from 'axios';
 
+// Smart API Base URL resolver
+const getApiBaseUrl = () => {
+  const rawUrl = import.meta.env.VITE_API_BASE_URL;
+  if (!rawUrl || rawUrl.trim() === '') {
+    return '/api';
+  }
+  const trimmed = rawUrl.trim().replace(/\/+$/, '');
+  if (trimmed === '/api' || trimmed.endsWith('/api')) {
+    return trimmed;
+  }
+  return `${trimmed}/api`;
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json'
   }

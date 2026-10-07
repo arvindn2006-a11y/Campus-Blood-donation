@@ -2,9 +2,21 @@ import { io } from 'socket.io-client';
 
 let socket = null;
 
+const getSocketUrl = () => {
+  const explicitSocketUrl = import.meta.env.VITE_SOCKET_URL;
+  if (explicitSocketUrl && explicitSocketUrl.trim() !== '') {
+    return explicitSocketUrl.trim().replace(/\/api\/?$/, '').replace(/\/+$/, '');
+  }
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+  if (apiBaseUrl && apiBaseUrl.startsWith('http')) {
+    return apiBaseUrl.trim().replace(/\/api\/?$/, '').replace(/\/+$/, '');
+  }
+  return window.location.origin;
+};
+
 export const getSocket = () => {
   if (!socket) {
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || window.location.origin;
+    const socketUrl = getSocketUrl();
     socket = io(socketUrl, {
       autoConnect: true,
       transports: ['websocket', 'polling']
