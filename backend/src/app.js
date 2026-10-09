@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
@@ -50,15 +52,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Base Status Route
-app.get('/', (req, res) => {
-  res.json({
-    status: 'online',
-    service: 'Campus BloodConnect REST API',
-    timestamp: new Date()
-  });
-});
-
+// API Health & Status Endpoints
 app.get('/api', (req, res) => {
   res.json({
     status: 'online',
@@ -80,7 +74,34 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/donations', donationRoutes);
 app.use('/api/admin', adminRoutes);
 
+// Static Files & SPA Routing Fallback
+const distPath = path.resolve(__dirname, '../../dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+    const indexPath = path.join(distPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      return res.sendFile(indexPath);
+    }
+    next();
+  });
+} else {
+  // Base Status Route if dist is not yet built
+  app.get('/', (req, res) => {
+    res.json({
+      status: 'online',
+      service: 'Campus BloodConnect REST API',
+      timestamp: new Date()
+    });
+  });
+}
+
 // Central Error Handler
 app.use(errorHandler);
 
 module.exports = app;
+
