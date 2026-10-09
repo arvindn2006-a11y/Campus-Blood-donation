@@ -1,0 +1,14 @@
+node_modules/
+.env
+.env.*
+!.env.example
+*.log
+*.sqlite
+*.sqlite3
+*.db
+serviceAccountKey*.json
+firebase-adminsdk*.json
+credentials.json
+client_secret*.json
+*.pem
+*.key

@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const axios = require('axios');
 const pool = require('../config/database');
 const { verifyIdToken } = require('../config/firebaseAdmin');
 const { logAudit } = require('../services/auditService');
@@ -455,6 +456,155 @@ const getSmsLogs = async (req, res, next) => {
   }
 };
 
+// 8. Initiate Google OAuth Flow
+const googleAuth = (req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    return res.status(500).json({
+      success: false,
+      message: 'Google OAuth is not configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in backend/.env'
+    });
+  }
+
+  const backendPort = process.env.PORT || 5000;
+  const backendUrl = process.env.BACKEND_URL || `http://localhost:${backendPort}`;
+  const redirectUri = `${backendUrl}/api/auth/google/callback`;
+  const scope = encodeURIComponent('openid profile email');
+  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`;
+
+  res.redirect(googleAuthUrl);
+};
+
+// 9. Handle Google OAuth Callback
+const googleAuthCallback = async (req, res, next) => {
+  const { code, error } = req.query;
+  const frontendUrl = (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0].trim().replace(/\/+$/, '');
+
+  if (error || !code) {
+    console.warn('Google OAuth error or cancellation:', error);
+    return res.redirect(`${frontendUrl}/login?error=${encodeURIComponent(error || 'Google sign-in was cancelled.')}`);
+  }
+
+  try {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const backendPort = process.env.PORT || 5000;
+    const backendUrl = process.env.BACKEND_URL || `http://localhost:${backendPort}`;
+    const redirectUri = `${backendUrl}/api/auth/google/callback`;
+
+    // Exchange authorization code for tokens
+    const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code'
+    }, {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 10000
+    });
+
+    const { access_token } = tokenResponse.data;
+
+    // Fetch user profile info from Google
+    const profileResponse = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${access_token}` },
+      timeout: 10000
+    });
+
+    const googleUser = profileResponse.data;
+    const email = (googleUser.email || '').trim().toLowerCase();
+    const name = (googleUser.name || 'Campus Student').trim();
+    const googleId = googleUser.id || '';
+
+    if (!email) {
+      return res.redirect(`${frontendUrl}/login?error=${encodeURIComponent('No email associated with this Google account.')}`);
+    }
+
+    // Check if user exists in database
+    const [existingRows] = await pool.query(
+      `SELECT u.*, s.id as student_table_id, s.student_id, s.department, s.year, s.blood_group, s.availability, s.last_donation_date
+       FROM users u
+       LEFT JOIN students s ON u.id = s.user_id
+       WHERE u.email = ?`,
+      [email]
+    );
+
+    let user = null;
+
+    if (existingRows.length > 0) {
+      user = existingRows[0];
+      if (user.status !== 'ACTIVE') {
+        return res.redirect(`${frontendUrl}/login?error=${encodeURIComponent('Your student account is inactive. Please contact campus admin.')}`);
+      }
+    } else {
+      // Auto-register new student user via Google
+      const generatedPhone = '+919' + Math.floor(100000000 + Math.random() * 900000000);
+      const generatedStudentId = 'STU' + (googleId ? String(googleId).slice(-6) : Math.floor(100000 + Math.random() * 900000));
+
+      const [insertUser] = await pool.query(
+        `INSERT INTO users (name, email, phone, role, status)
+         VALUES (?, ?, ?, 'STUDENT', 'ACTIVE')`,
+        [name, email, generatedPhone]
+      );
+
+      const userId = insertUser.insertId;
+
+      await pool.query(
+        `INSERT INTO students (user_id, student_id, department, year, blood_group, availability)
+         VALUES (?, ?, 'Computer Science & Engineering', 1, 'O+', 1)`,
+        [userId, generatedStudentId]
+      );
+
+      user = {
+        id: userId,
+        name,
+        email,
+        phone: generatedPhone,
+        role: 'STUDENT',
+        student_id: generatedStudentId,
+        department: 'Computer Science & Engineering',
+        year: 1,
+        blood_group: 'O+',
+        availability: true,
+        last_donation_date: null
+      };
+    }
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role, name: user.name },
+      process.env.JWT_SECRET || 'secret',
+      { expiresIn: '7d' }
+    );
+
+    await logAudit({
+      userId: user.id,
+      action: 'GOOGLE_OAUTH_LOGIN',
+      entityType: 'USER',
+      entityId: user.id
+    });
+
+    const userPayload = encodeURIComponent(JSON.stringify({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      studentId: user.student_id,
+      department: user.department,
+      year: user.year,
+      bloodGroup: user.blood_group || 'O+',
+      availability: Boolean(user.availability),
+      lastDonationDate: user.last_donation_date
+    }));
+
+    return res.redirect(`${frontendUrl}/login?token=${token}&user=${userPayload}`);
+  } catch (err) {
+    console.error('Google OAuth callback error:', err.response?.data || err.message);
+    return res.redirect(`${frontendUrl}/login?error=${encodeURIComponent('Failed to authenticate with Google. Please check your credentials.')}`);
+  }
+};
+
 module.exports = {
   handleSendOtp,
   handleVerifyOtp,
@@ -462,6 +612,8 @@ module.exports = {
   register,
   login,
   adminLogin,
-  getSmsLogs
+  getSmsLogs,
+  googleAuth,
+  googleAuthCallback
 };
 

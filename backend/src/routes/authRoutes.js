@@ -13,6 +13,10 @@ router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.post('/admin/login', authController.adminLogin);
 
+// Google OAuth Routes
+router.get('/google', authController.googleAuth);
+router.get('/google/callback', authController.googleAuthCallback);
+
 // SMS & Audit Logs
 router.get('/sms-logs', verifyToken, requireRole(['ADMIN']), authController.getSmsLogs);
 

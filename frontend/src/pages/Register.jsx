@@ -434,6 +434,28 @@ export default function Register() {
                 </span>
               )}
             </button>
+
+            {/* Google OAuth Option */}
+            <div className="pt-2">
+              <div className="relative flex py-1.5 items-center mb-2">
+                <div className="flex-grow border-t border-white/10"></div>
+                <span className="flex-shrink mx-2 text-[10px] uppercase font-bold text-slate-400 tracking-wider">or sign up with</span>
+                <div className="flex-grow border-t border-white/10"></div>
+              </div>
+
+              <a
+                href="/api/auth/google"
+                className="w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-white text-xs font-bold transition-all flex items-center justify-center gap-2.5 shadow-md hover:border-white/30"
+              >
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.3 8.8 5 12 5z" />
+                  <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.7-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z" />
+                  <path fill="#FBBC05" d="M5.3 14.7c-.2-.7-.4-1.5-.4-2.7s.1-2 .4-2.7L1.6 6.4C.6 8.3 0 10.5 0 12.8s.6 4.5 1.6 6.4l3.7-4.5z" />
+                  <path fill="#34A853" d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.2 0-5.8-2.3-6.7-5.3L1.6 16.4C3.5 20.2 7.4 23.5 12 23.5z" />
+                </svg>
+                <span>Continue with Google</span>
+              </a>
+            </div>
           </form>
         )}
 
