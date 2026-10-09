@@ -62,7 +62,7 @@ app.get('/api', (req, res) => {
 });
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'Campus BloodConnect API' });
+  res.json({ status: 'ok', service: 'Campus BloodConnect API', version: '2.0.0-verified' });
 });
 
 // API Routes (Mounted on both /api and / for universal Serverless/Vercel/Standard compatibility)
