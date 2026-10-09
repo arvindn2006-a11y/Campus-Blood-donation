@@ -300,7 +300,8 @@ const register = async (req, res, next) => {
 // 5. Login with Email/Phone + Password or Firebase Token
 const login = async (req, res, next) => {
   try {
-    const { emailOrPhone, password, firebaseToken } = req.body;
+    const emailOrPhone = req.body.emailOrPhone || req.body.email || req.body.phone;
+    const { password, firebaseToken } = req.body;
 
     let user = null;
 
@@ -328,7 +329,7 @@ const login = async (req, res, next) => {
         return res.status(400).json({ success: false, message: 'Please enter your email/phone and password.' });
       }
 
-      const cleanInput = emailOrPhone.trim();
+      const cleanInput = String(emailOrPhone).trim();
       const normalizedInput = normalizePhone(cleanInput);
 
       const [rows] = await pool.query(
@@ -394,7 +395,8 @@ const login = async (req, res, next) => {
 // 6. Admin Secure Login
 const adminLogin = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const email = req.body.email || req.body.emailOrPhone;
+    const { password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Email and password required.' });
     }

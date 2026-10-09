@@ -202,11 +202,17 @@ async function sendOtp({ phone, email = null, name = 'Student Donor', purpose = 
     }
   }
 
+  const isSmsLive = smsResult.deliveryStatus === 'SENT';
+  const displayMsg = isSmsLive
+    ? `Verification code dispatched to ${normalized}${email ? ` and ${email}` : ''}`
+    : `Verification code generated for ${normalized}${email ? ` and ${email}` : ''}. [Demo OTP: ${otpCode}]`;
+
   return {
     success: true,
-    message: `Verification code generated and sent to ${normalized}${email ? ` and ${email}` : ''}`,
+    message: displayMsg,
     phone: normalized,
     email,
+    otpCode: !isSmsLive ? otpCode : undefined,
     expiresInSeconds: 300,
     expiresAt: new Date(expiresAt).toISOString(),
     smsStatus: smsResult.deliveryStatus,
