@@ -1,9 +1,15 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
 
-// Paste your Firebase web configuration in frontend/.env
+const rawApiKey = import.meta.env.VITE_FIREBASE_API_KEY;
+
+// Helper to check if Firebase is configured with real API key
+export const isFirebaseConfigured = () => {
+  return Boolean(rawApiKey && typeof rawApiKey === 'string' && rawApiKey.trim().length > 5 && !rawApiKey.includes('your_') && !rawApiKey.includes('AIzaSy...'));
+};
+
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  apiKey: rawApiKey || "AIzaSyDummyKeyForFallbackInit123456789",
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "campus-bloodconnect.firebaseapp.com",
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "campus-bloodconnect",
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "campus-bloodconnect.appspot.com",
@@ -11,17 +17,24 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || ""
 };
 
-// Initialize Firebase App
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
+let app = null;
+let auth = null;
 
-// Helper to check if Firebase is configured with real API key
-export const isFirebaseConfigured = () => {
-  return Boolean(import.meta.env.VITE_FIREBASE_API_KEY && import.meta.env.VITE_FIREBASE_API_KEY.length > 5);
-};
+if (isFirebaseConfigured()) {
+  try {
+    app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    auth = getAuth(app);
+  } catch (err) {
+    console.warn('Firebase initialization skipped/failed:', err?.message || err);
+  }
+}
 
 // Initialize invisible or visible reCAPTCHA verifier for Phone Auth
 export const initRecaptcha = (containerId = 'recaptcha-container') => {
+  if (!auth) {
+    throw new Error('Firebase Auth is not configured. Please use Backend/SMS OTP mode or configure Firebase API key in environment variables.');
+  }
+
   if (window.recaptchaVerifier) {
     try {
       window.recaptchaVerifier.clear();
@@ -45,7 +58,7 @@ export const initRecaptcha = (containerId = 'recaptcha-container') => {
 
 // Trigger REAL Firebase SMS OTP
 export const sendPhoneOtp = async (phoneNumber, containerId = 'recaptcha-container') => {
-  if (!isFirebaseConfigured()) {
+  if (!isFirebaseConfigured() || !auth) {
     throw new Error('Firebase API key is not configured in frontend/.env. Please follow SETUP_REQUIRED.md to add your Firebase Web App credentials.');
   }
 
@@ -67,3 +80,4 @@ export const verifyPhoneOtp = async (otpCode) => {
 };
 
 export { app, auth };
+
