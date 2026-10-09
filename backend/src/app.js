@@ -65,14 +65,20 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'Campus BloodConnect API' });
 });
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/students', studentRoutes);
-app.use('/api/donors', donorRoutes);
-app.use('/api/blood-requests', bloodRequestRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/donations', donationRoutes);
-app.use('/api/admin', adminRoutes);
+// API Routes (Mounted on both /api and / for universal Serverless/Vercel/Standard compatibility)
+const registerRoutes = (prefix = '') => {
+  app.use(`${prefix}/auth`, authRoutes);
+  app.use(`${prefix}/students`, studentRoutes);
+  app.use(`${prefix}/donors`, donorRoutes);
+  app.use(`${prefix}/blood-requests`, bloodRequestRoutes);
+  app.use(`${prefix}/notifications`, notificationRoutes);
+  app.use(`${prefix}/donations`, donationRoutes);
+  app.use(`${prefix}/admin`, adminRoutes);
+};
+
+registerRoutes('/api');
+registerRoutes('');
+
 
 // Static Files & SPA Routing Fallback
 const distPath = path.resolve(__dirname, '../../dist');
