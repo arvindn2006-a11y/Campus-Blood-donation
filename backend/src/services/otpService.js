@@ -1,7 +1,7 @@
+const crypto = require('crypto');
 const pool = require('../config/database');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
-const { getIO } = require('./socketService');
 const { sendOtpEmail } = require('./mailService');
 
 // In-memory fallback cache for ultra-low latency OTP lookup
@@ -21,13 +21,13 @@ function normalizePhone(phone) {
   return cleaned;
 }
 
-// Generate cryptographically random 6-digit OTP
+// Generate cryptographically secure 6-digit OTP
 function generateOtpCode() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return crypto.randomInt(100000, 999999).toString();
 }
 
 /**
- * Dispatches real SMS through configured gateway (Fast2SMS / Twilio / 2Factor / Real-Time Gateway)
+ * Dispatches real SMS through configured gateway (Fast2SMS / Twilio / 2Factor)
  */
 async function dispatchSmsGateway({ phone, otpCode, purpose }) {
   const provider = (process.env.SMS_PROVIDER || 'FAST2SMS').toUpperCase();
@@ -37,13 +37,13 @@ async function dispatchSmsGateway({ phone, otpCode, purpose }) {
 
   const message = `Your Campus BloodConnect verification code is ${otpCode}. Valid for 5 minutes. Save lives!`;
 
-  let deliveryStatus = 'SENT';
-  let providerMessageId = 'otp_' + Date.now();
+  let deliveryStatus = 'PENDING';
+  let providerMessageId = null;
   let providerUsed = provider;
 
   try {
-    // 1. Fast2SMS Provider (Instant Indian SMS)
-    if ((provider === 'FAST2SMS' || apiKey.length > 10) && apiKey) {
+    // 1. Fast2SMS Provider (Active SMS Gateway)
+    if (provider === 'FAST2SMS' && apiKey && apiKey.length > 5) {
       try {
         const response = await axios.post('https://www.fast2sms.com/dev/bulkV2', {
           route: 'otp',
@@ -54,25 +54,34 @@ async function dispatchSmsGateway({ phone, otpCode, purpose }) {
             'authorization': apiKey,
             'Content-Type': 'application/json'
           },
-          timeout: 8000
+          timeout: 10000
         });
 
         if (response.data && response.data.return) {
           deliveryStatus = 'SENT';
           providerMessageId = response.data.request_id || 'f2s_' + Date.now();
-          providerUsed = 'FAST2SMS (Live SMS)';
+          providerUsed = 'FAST2SMS';
         } else {
-          console.warn('Fast2SMS response warning:', response.data);
-          deliveryStatus = 'SENT'; // fallback to simulated delivery
-          providerUsed = 'FAST2SMS (Demo)';
+          deliveryStatus = 'FAILED';
+          console.warn('Fast2SMS gateway returned error:', response.data?.message || response.data);
+          return {
+            success: false,
+            provider: 'FAST2SMS',
+            error: response.data?.message || 'Carrier dispatch rejected'
+          };
         }
       } catch (f2sErr) {
-        console.warn('Fast2SMS live dispatch note:', f2sErr.message);
-        providerUsed = 'Real-Time Gateway';
+        deliveryStatus = 'FAILED';
+        console.warn('Fast2SMS dispatch error:', f2sErr.response?.data || f2sErr.message);
+        return {
+          success: false,
+          provider: 'FAST2SMS',
+          error: f2sErr.response?.data?.message || f2sErr.message
+        };
       }
     }
-    // 2. Twilio Provider (International SMS)
-    else if (provider === 'TWILIO' && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+    // 2. Twilio Provider (Optional international SMS)
+    else if (provider === 'TWILIO' && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
       try {
         const twilio = require('twilio');
         const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -81,52 +90,53 @@ async function dispatchSmsGateway({ phone, otpCode, purpose }) {
           from: process.env.TWILIO_PHONE_NUMBER,
           to: phone
         });
+        deliveryStatus = 'SENT';
         providerMessageId = twilioRes.sid;
-        providerUsed = 'TWILIO (Live SMS)';
+        providerUsed = 'TWILIO';
       } catch (twErr) {
-        console.warn('Twilio dispatch note:', twErr.message);
-        providerUsed = 'Twilio Gateway (Simulated)';
+        deliveryStatus = 'FAILED';
+        console.warn('Twilio dispatch error:', twErr.message);
+        return {
+          success: false,
+          provider: 'TWILIO',
+          error: twErr.message
+        };
       }
     } 
-    // 3. 2Factor Provider (India OTP)
+    // 3. 2Factor Provider (Optional India OTP)
     else if (provider === '2FACTOR' && process.env.TWO_FACTOR_API_KEY) {
       try {
         const tfRes = await axios.get(
           `https://2factor.in/v3/${process.env.TWO_FACTOR_API_KEY}/SMS/${digits10}/${otpCode}/CAMPUS_BLOOD`,
-          { timeout: 8000 }
+          { timeout: 10000 }
         );
+        deliveryStatus = 'SENT';
         providerMessageId = tfRes.data?.Details || '2f_' + Date.now();
-        providerUsed = '2FACTOR (Live SMS)';
+        providerUsed = '2FACTOR';
       } catch (tfErr) {
-        console.warn('2Factor dispatch note:', tfErr.message);
+        deliveryStatus = 'FAILED';
+        console.warn('2Factor dispatch error:', tfErr.message);
+        return {
+          success: false,
+          provider: '2FACTOR',
+          error: tfErr.message
+        };
       }
     } else {
-      // Real-Time Simulator Gateway
-      providerUsed = 'Real-Time SMS Gateway';
-      console.log(`📱 [REAL-TIME SMS] To: ${phone} | Code: ${otpCode} | Purpose: ${purpose}`);
+      // Unconfigured provider
+      providerUsed = 'NONE';
+      deliveryStatus = 'NOT_CONFIGURED';
     }
 
     // Log SMS delivery in database
     await pool.query(
       `INSERT INTO sms_logs (phone, message, provider, delivery_status, provider_message_id)
        VALUES (?, ?, ?, ?, ?)`,
-      [phone, message, providerUsed, deliveryStatus, providerMessageId]
+      [phone, `Verification code OTP sent for ${purpose}`, providerUsed, deliveryStatus, providerMessageId]
     );
 
-    // Broadcast live real-time SMS event via Socket.IO so user HUD receives instant incoming alert
-    const io = getIO();
-    if (io) {
-      io.emit('realtime_sms_received', {
-        phone,
-        otpCode,
-        message,
-        provider: providerUsed,
-        timestamp: new Date()
-      });
-    }
-
     return {
-      success: true,
+      success: deliveryStatus === 'SENT',
       provider: providerUsed,
       providerMessageId,
       deliveryStatus
@@ -176,27 +186,32 @@ async function sendOtp({ phone, email = null, name = 'Student Donor', purpose = 
     purpose
   });
 
+  let emailSent = false;
   // Also dispatch via Google Mail / Email in real time if email is provided
   if (email) {
-    sendOtpEmail({
-      toEmail: email,
-      otpCode,
-      name,
-      purpose
-    }).catch(console.error);
+    try {
+      const emailRes = await sendOtpEmail({
+        toEmail: email,
+        otpCode,
+        name,
+        purpose
+      });
+      emailSent = Boolean(emailRes && emailRes.emailSent);
+    } catch (e) {
+      console.warn('Email dispatch warning:', e.message);
+    }
   }
 
   return {
     success: true,
-    message: `OTP generated and sent to ${normalized}${email ? ` and ${email}` : ''}`,
+    message: `Verification code generated and sent to ${normalized}${email ? ` and ${email}` : ''}`,
     phone: normalized,
     email,
     expiresInSeconds: 300,
     expiresAt: new Date(expiresAt).toISOString(),
-    provider: smsResult.provider,
-    previewOtp: otpCode,
-    otpCode: otpCode,
-    otp: otpCode
+    smsStatus: smsResult.deliveryStatus,
+    smsProvider: smsResult.provider,
+    emailSent
   };
 }
 
@@ -290,4 +305,3 @@ module.exports = {
   verifyOtp,
   normalizePhone
 };
-

@@ -6,7 +6,6 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
 import RealtimeAlertBanner from './components/RealtimeAlertBanner';
-import QuickDemoBar from './components/QuickDemoBar';
 
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -55,7 +54,6 @@ export default function App() {
               </Routes>
             </main>
             <Footer />
-            <QuickDemoBar />
           </div>
         </Router>
       </SocketProvider>
